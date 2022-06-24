@@ -1,0 +1,135 @@
+---
+title: "R数据期末作业"
+output: html_document
+date: '2022-06-23'
+---
+
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(hexbin)
+```
+
+```{r}
+best_in_class <- mpg %>%
+ group_by(class) %>%
+ filter(row_number(desc(hwy)) == 1)
+ggplot( mpg,aes(displ, hwy)) +
+  geom_point(aes(color = class)) +
+ geom_point(size = 3, shape = 1, data =best_in_class ) +
+ ggrepel::geom_label_repel(
+ aes(label = model),
+ data = best_in_class
+ )
+```
+
+```{r}
+
+smaller<-diamonds%>%
+  filter(carat<3)
+ggplot(data = smaller, mapping = aes(x = carat, y = price)) +
+ geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)))
+ggplot(data=smaller,mapping=aes(x=carat,y=price))+
+  geom_boxplot(mapping=aes(group=cut_number(carat,20)))
+```
+
+```{r  include=FALSE}
+library(lattice)
+library(zoo)
+```
+```{r include=FALSE}
+evaluate <- function(PARAM, minVal = NA, maxVal = NA, y = 2014,
+                     transform = FALSE, verbose = FALSE,
+                     negative = FALSE, transformOnly = FALSE,
+                     returnData = FALSE, accountParams = NULL){
+  
+  # Step 1
+  # Convert and declare parameters if they exist on unbounded (-inf,inf) domain
+  if( transform | transformOnly ){
+    PARAM <- minVal +
+      (maxVal - minVal) * unlist(lapply( PARAM, function(v) (1 + exp(-v))^(-1) ))
+    if( transformOnly ){
+
+    }
+  }
+ return(PARAM)  
+}  ## 修改
+  
+ 
+# Declare bounds and step size for optimization
+lowerBound <- c(n1 = 5, nFact = 3, nSharpe = 22, shThresh = 0.05)
+upperBound <- c(n1 = 80, nFact = 3, nSharpe = 22, shThresh = 0.95)
+stepSize <- c(n1 = 5, nFact = 1, nSharpe = 1, shThresh = 0.05)
+
+pnames <- names(stepSize)
+np <- length(pnames)
+
+# Declare list of all test points
+POINTS <- list()
+for( p in pnames ){
+  POINTS[[p]] <- seq(lowerBound[[p]], upperBound[[p]], stepSize[[p]])
+}
+
+OPTIM <- data.frame(matrix(NA, nrow = prod(unlist(lapply(POINTS, length))),
+                           ncol = np + 1))
+names(OPTIM)[1:np] <- names(POINTS)
+names(OPTIM)[np+1] <- "obj"
+
+# Store all possible combinations of parameters
+for( i in 1:np ){
+  each <- prod(unlist(lapply(POINTS, length))[-(1:i)])
+  times <- prod(unlist(lapply(POINTS, length))[-(i:length(pnames))])
+  OPTIM[,i] <- rep(POINTS[[pnames[i]]], each = each, times = times)
+}
+
+# Test each row of OPTIM
+timeLapse <- proc.time()[3]
+for( i in 1:nrow(OPTIM) ){
+  OPTIM[i,np+1] <- evaluate(OPTIM[i,1:np], transform = FALSE, y = 2014)
+  cat(paste0("##  ", floor( 100 * i / nrow(OPTIM)), "% complete\n"))
+  cat(paste0("##  ",
+             round( ((proc.time()[3] - timeLapse) * 
+                       ((nrow(OPTIM) - i)/ i))/60, 2),
+             " minutes remaining\n\n"))
+}
+```
+
+
+```{r}
+library(lattice)
+wireframe(obj ~ n1*shThresh, data = OPTIM,
+          xlab = "n1", ylab = "shThresh",
+          main = "Long-Only MACD Exhaustive Optimization",
+          drape = TRUE,
+          colorkey = TRUE,
+          screen = list(z = 15, x = -60)
+)
+```
+
+
+
+
+```
+
+
